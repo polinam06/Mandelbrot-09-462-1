@@ -34,7 +34,8 @@ public class MainWindow extends JFrame {
             return new Color(r, g, b);
         });
 
-        mainPanel = new SelectablePanel(painter);
+
+        mainPanel = new SelectablePanel(painter, conv);
         mainPanel.setBackground(Color.WHITE);
         mainPanel.addSelectListener((r)->{
             var xMin = conv.xScr2Crt(r.x);
