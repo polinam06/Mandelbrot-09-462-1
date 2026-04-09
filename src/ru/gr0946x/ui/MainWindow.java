@@ -34,23 +34,25 @@ public class MainWindow extends JFrame {
             return new Color(r, g, b);
         });
 
-
         mainPanel = new SelectablePanel(painter, conv);
         mainPanel.setBackground(Color.WHITE);
+
         mainPanel.addSelectListener((r)->{
             var xMin = conv.xScr2Crt(r.x);
             var xMax = conv.xScr2Crt(r.x + r.width);
             var yMin = conv.yScr2Crt(r.y + r.height);
             var yMax = conv.yScr2Crt(r.y);
-            conv.setXShape(xMin, xMax);
-            conv.setYShape(yMin, yMax);
-            mainPanel.repaint();
+            mainPanel.applyZoom(xMin, xMax, yMin, yMax);
         });
 
         menuManager = new MenuManager();
         setJMenuBar(menuManager.createMenuBar());
 
         setContent();
+
+        SwingUtilities.invokeLater(() -> {
+            mainPanel.repaint();
+        });
     }
 
     private void setContent(){
