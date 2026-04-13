@@ -120,27 +120,35 @@ public class SelectablePanel extends PaintPanel{
         int height = getHeight();
         if (width <= 0 || height <= 0) return;
 
+        double centerX = (currentXMin + currentXMax) / 2.0;
+        double centerY = (currentYMin + currentYMax) / 2.0;
+
+        double newWidth = currentWidth;
+        double newHeight = currentHeight;
+
+        double fractalRatio = newWidth / newHeight;
         double panelRatio = (double) width / height;
-        double currentRatio = currentWidth / currentHeight;
 
         double newXMin, newXMax, newYMin, newYMax;
 
-        if (panelRatio > currentRatio) {
-            double newW = currentHeight * panelRatio;
-            double offsetX = (newW - currentWidth) / 2.0;
-            double centerX = (currentXMin + currentXMax) / 2.0;
-            newXMin = centerX - newW / 2.0;
-            newXMax = centerX + newW / 2.0;
-            newYMin = currentYMin;
-            newYMax = currentYMax;
+        if (panelRatio > fractalRatio) {
+            double scaledHeight = newHeight;
+            double scaledWidth = scaledHeight * panelRatio;
+
+            double halfScaledWidth = scaledWidth / 2.0;
+            newXMin = centerX - halfScaledWidth;
+            newXMax = centerX + halfScaledWidth;
+            newYMin = centerY - newHeight / 2.0;
+            newYMax = centerY + newHeight / 2.0;
         } else {
-            double newH = currentWidth / panelRatio;
-            double offsetY = (newH - currentHeight) / 2.0;
-            double centerY = (currentYMin + currentYMax) / 2.0;
-            newYMin = centerY - newH / 2.0;
-            newYMax = centerY + newH / 2.0;
-            newXMin = currentXMin;
-            newXMax = currentXMax;
+            double scaledWidth = newWidth;
+            double scaledHeight = scaledWidth / panelRatio;
+
+            double halfScaledHeight = scaledHeight / 2.0;
+            newXMin = centerX - newWidth / 2.0;
+            newXMax = centerX + newWidth / 2.0;
+            newYMin = centerY - halfScaledHeight;
+            newYMax = centerY + halfScaledHeight;
         }
 
         converter.setXShape(newXMin, newXMax);
@@ -153,6 +161,7 @@ public class SelectablePanel extends PaintPanel{
         currentYMin = newYMin;
         currentYMax = newYMax;
     }
+
 
     public void applyZoom(double xMin, double xMax, double yMin, double yMax) {
         converter.setXShape(xMin, xMax);
