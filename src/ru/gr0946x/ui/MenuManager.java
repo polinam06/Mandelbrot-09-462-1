@@ -1,23 +1,29 @@
 package ru.gr0946x.ui;
-
+import ru.gr0946x.ui.painting.FractalPainter;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
-
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.Color;
 public class MenuManager {
-
+    private final FractalPainter painter;
+    public MenuManager(FractalPainter painter) {
+        this.painter = painter;
+    }
     public JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
         JMenu fileMenu = new JMenu("Файл");
 
         JMenuItem saveJpgItem = new JMenuItem("Сохранить как JPG...");
-        saveJpgItem.addActionListener(this::showNotImplementedMessage);
-        fileMenu.add(saveJpgItem);
-
         JMenuItem savePngItem = new JMenuItem("Сохранить как PNG...");
-        savePngItem.addActionListener(this::showNotImplementedMessage);
+        fileMenu.add(saveJpgItem);
         fileMenu.add(savePngItem);
-
+        saveJpgItem.addActionListener(e -> saveImage("jpg"));
+        savePngItem.addActionListener(e -> saveImage("png"));
         JMenuItem saveFracItem = new JMenuItem("Сохранить как FRAC...");
         saveFracItem.addActionListener(this::showNotImplementedMessage);
         fileMenu.add(saveFracItem);
@@ -108,5 +114,48 @@ public class MenuManager {
                 "Информация",
                 JOptionPane.INFORMATION_MESSAGE
         );
+    }
+    private void saveImage(String format) {
+        System.out.println("SAVE CLICKED " + format);
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Сохранить изображение");
+
+        if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            java.io.File file = chooser.getSelectedFile();
+
+            String name = file.getName().toLowerCase();
+
+            if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png")) {
+                file = new File(file.getAbsolutePath().replaceAll("\\.(jpg|jpeg|png)$", ""));
+            }
+
+            file = new File(file.getAbsolutePath() + "." + format);
+
+            try {
+                BufferedImage img = painter.createImage();
+
+// ✍️ ПОДПИСЬ КООРДИНАТ
+                Graphics2D g = img.createGraphics();
+
+                g.setColor(Color.WHITE);
+
+                g.drawString(
+                        String.format("Re: [%.3f; %.3f], Im: [%.3f; %.3f]",
+                                painter.getConverter().getXMin(),
+                                painter.getConverter().getXMax(),
+                                painter.getConverter().getYMin(),
+                                painter.getConverter().getYMax()
+                        ),
+                        10,
+                        img.getHeight() - 10
+                );
+
+                g.dispose();
+
+                ImageIO.write(img, format, file);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

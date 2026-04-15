@@ -36,7 +36,7 @@ public class JuliaWindow extends JFrame {
             juliaPanel.applyZoom(xMin, xMax, yMin, yMax);
         });
 
-        MenuManager menuManager = new MenuManager();
+        MenuManager menuManager = new MenuManager(painter);
         setJMenuBar(menuManager.createMenuBar());
 
         var gl = new GroupLayout(getContentPane());

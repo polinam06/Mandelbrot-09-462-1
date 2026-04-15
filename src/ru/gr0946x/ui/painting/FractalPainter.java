@@ -1,5 +1,6 @@
 package ru.gr0946x.ui.painting;
-
+import java.awt.image.BufferedImage;
+import java.awt.Graphics2D;
 import ru.gr0946x.Converter;
 import ru.gr0946x.ui.fractals.ColorFunction;
 import ru.gr0946x.ui.fractals.Fractal;
@@ -50,5 +51,28 @@ public class FractalPainter implements Painter{
                 g.fillRect(i, j, 1, 1);
             }
         }
+    }
+    public BufferedImage createImage() {
+        int w = getWidth();
+        int h = getHeight();
+
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+
+        for (int i = 0; i < w; i++) {
+            for (int j = 0; j < h; j++) {
+                var x = conv.xScr2Crt(i);
+                var y = conv.yScr2Crt(j);
+                var res = fractal.inSetProbability(x, y);
+                g.setColor(colorFunction.getColor(res));
+                g.fillRect(i, j, 1, 1);
+            }
+        }
+
+        g.dispose();
+        return img;
+    }
+    public Converter getConverter() {
+        return conv;
     }
 }
