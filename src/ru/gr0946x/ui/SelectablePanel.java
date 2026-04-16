@@ -6,9 +6,11 @@ import ru.gr0946x.ui.painting.Painter;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 
-public class SelectablePanel extends PaintPanel{
+public class SelectablePanel extends PaintPanel {
     private SelectedRect rect = null;
     private Graphics g;
 
@@ -33,17 +35,41 @@ public class SelectablePanel extends PaintPanel{
     private double currentWidth;
     private double currentHeight;
 
-    public void addSelectListener(SelectListener listener){
+    private static final int MAX_HISTORY_STEPS = 100;
+
+    private final Deque<ViewState> undoHistory = new ArrayDeque<>();
+    private final Deque<ViewState> redoHistory = new ArrayDeque<>();
+
+    private static class ViewState {
+        double xMin;
+        double xMax;
+        double yMin;
+        double yMax;
+        double width;
+        double height;
+
+        ViewState(double xMin, double xMax, double yMin, double yMax, double width, double height) {
+            this.xMin = xMin;
+            this.xMax = xMax;
+            this.yMin = yMin;
+            this.yMax = yMax;
+            this.width = width;
+            this.height = height;
+        }
+    }
+
+    public void addSelectListener(SelectListener listener) {
         selectHandlers.add(listener);
     }
 
-    public void removeSelectListener(SelectListener listener){
+    public void removeSelectListener(SelectListener listener) {
         selectHandlers.remove(listener);
     }
 
     public SelectablePanel(Painter painter, Converter converter) {
         super(painter);
         this.converter = converter;
+
         this.origXMin = converter.getXMin();
         this.origXMax = converter.getXMax();
         this.origYMin = converter.getYMin();
@@ -75,6 +101,7 @@ public class SelectablePanel extends PaintPanel{
             public void mouseReleased(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON1) {
                     paintSelectedRect();
+
                     if (rect != null) {
                         for (var handler : selectHandlers) {
                             handler.onSelect(new Rectangle(
@@ -88,20 +115,26 @@ public class SelectablePanel extends PaintPanel{
                     }
                 } else if (e.getButton() == MouseEvent.BUTTON3 && rightButtonStartPos != null) {
                     isRightDragging = false;
-                    // Стираем линию
+
                     if (g != null && rightButtonStartPos != null && rightButtonCurrentPos != null) {
                         g.setXORMode(Color.BLACK);
                         g.setColor(Color.WHITE);
-                        g.drawLine(rightButtonStartPos.x, rightButtonStartPos.y,
-                                rightButtonCurrentPos.x, rightButtonCurrentPos.y);
+                        g.drawLine(
+                                rightButtonStartPos.x,
+                                rightButtonStartPos.y,
+                                rightButtonCurrentPos.x,
+                                rightButtonCurrentPos.y
+                        );
                         g.setPaintMode();
                     }
 
                     int deltaX = e.getX() - rightButtonStartPos.x;
                     int deltaY = e.getY() - rightButtonStartPos.y;
+
                     if (deltaX != 0 || deltaY != 0) {
                         shiftFractal(deltaX, deltaY);
                     }
+
                     rightButtonStartPos = null;
                     rightButtonCurrentPos = null;
                 }
@@ -113,27 +146,34 @@ public class SelectablePanel extends PaintPanel{
             public void mouseDragged(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     paintSelectedRect();
-                    if (rect != null){
+                    if (rect != null) {
                         rect.setLastPoint(e.getX(), e.getY());
                     }
                     paintSelectedRect();
                 } else if (SwingUtilities.isRightMouseButton(e) && isRightDragging) {
-                    // Стираем старую линию
                     if (g != null && rightButtonStartPos != null && rightButtonCurrentPos != null) {
                         g.setXORMode(Color.BLACK);
                         g.setColor(Color.WHITE);
-                        g.drawLine(rightButtonStartPos.x, rightButtonStartPos.y,
-                                rightButtonCurrentPos.x, rightButtonCurrentPos.y);
+                        g.drawLine(
+                                rightButtonStartPos.x,
+                                rightButtonStartPos.y,
+                                rightButtonCurrentPos.x,
+                                rightButtonCurrentPos.y
+                        );
                         g.setPaintMode();
                     }
 
-                    // Рисуем новую линию
                     rightButtonCurrentPos = new Point(e.getX(), e.getY());
+
                     if (g != null && rightButtonStartPos != null) {
                         g.setXORMode(Color.BLACK);
                         g.setColor(Color.WHITE);
-                        g.drawLine(rightButtonStartPos.x, rightButtonStartPos.y,
-                                rightButtonCurrentPos.x, rightButtonCurrentPos.y);
+                        g.drawLine(
+                                rightButtonStartPos.x,
+                                rightButtonStartPos.y,
+                                rightButtonCurrentPos.x,
+                                rightButtonCurrentPos.y
+                        );
                         g.setPaintMode();
                     }
                 }
@@ -148,6 +188,72 @@ public class SelectablePanel extends PaintPanel{
                 g = getGraphics();
             }
         });
+    }
+
+    private ViewState createCurrentState() {
+        return new ViewState(
+                currentXMin,
+                currentXMax,
+                currentYMin,
+                currentYMax,
+                currentWidth,
+                currentHeight
+        );
+    }
+
+    private void pushWithLimit(Deque<ViewState> history, ViewState state) {
+        if (history.size() >= MAX_HISTORY_STEPS) {
+            history.removeFirst();
+        }
+        history.addLast(state);
+    }
+
+    private void saveStateForUndo() {
+        pushWithLimit(undoHistory, createCurrentState());
+        redoHistory.clear();
+    }
+
+    private void restoreState(ViewState state) {
+        currentXMin = state.xMin;
+        currentXMax = state.xMax;
+        currentYMin = state.yMin;
+        currentYMax = state.yMax;
+        currentWidth = state.width;
+        currentHeight = state.height;
+
+        converter.setXShape(currentXMin, currentXMax);
+        converter.setYShape(currentYMin, currentYMax);
+
+        adjustBoundsForAspectRatio();
+        repaint();
+    }
+
+    public boolean canUndo() {
+        return !undoHistory.isEmpty();
+    }
+
+    public boolean canRedo() {
+        return !redoHistory.isEmpty();
+    }
+
+    public void undo() {
+        if (!canUndo()) {
+            return;
+        }
+
+        pushWithLimit(redoHistory, createCurrentState());
+        ViewState previousState = undoHistory.removeLast();
+        restoreState(previousState);
+    }
+
+    public void redo() {
+        if (!canRedo()) {
+            return;
+        }
+
+        pushWithLimit(undoHistory, createCurrentState());
+        ViewState nextState = redoHistory.removeLast();
+        restoreState(nextState);
     }
 
     private void adjustBoundsForAspectRatio() {
@@ -197,30 +303,37 @@ public class SelectablePanel extends PaintPanel{
         currentYMax = newYMax;
     }
 
-
     public void applyZoom(double xMin, double xMax, double yMin, double yMax) {
+        saveStateForUndo();
+
         converter.setXShape(xMin, xMax);
         converter.setYShape(yMin, yMax);
+
         currentXMin = xMin;
         currentXMax = xMax;
         currentYMin = yMin;
         currentYMax = yMax;
         currentWidth = xMax - xMin;
         currentHeight = yMax - yMin;
+
         adjustBoundsForAspectRatio();
         repaint();
     }
 
     private void shiftFractal(int deltaX, int deltaY) {
+        saveStateForUndo();
+
         double xMin = converter.xScr2Crt(0);
         double xMax = converter.xScr2Crt(getWidth());
         double yMin = converter.yScr2Crt(getHeight());
         double yMax = converter.yScr2Crt(0);
+
         double width = xMax - xMin;
         double height = yMax - yMin;
 
         double shiftX = (deltaX * width) / getWidth();
         double shiftY = (deltaY * height) / getHeight();
+
         converter.setXShape(xMin - shiftX, xMax - shiftX);
         converter.setYShape(yMin + shiftY, yMax + shiftY);
 
@@ -232,8 +345,8 @@ public class SelectablePanel extends PaintPanel{
         repaint();
     }
 
-    private void paintSelectedRect(){
-        if (g != null && rect != null){
+    private void paintSelectedRect() {
+        if (g != null && rect != null) {
             g.setXORMode(Color.WHITE);
             g.setColor(Color.BLACK);
             g.drawRect(

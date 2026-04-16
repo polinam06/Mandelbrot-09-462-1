@@ -17,11 +17,10 @@ import java.awt.event.MouseEvent;
 
 import static java.lang.Math.*;
 
-
 public class MainWindow extends JFrame {
 
     private final SelectablePanel mainPanel;
-    private Painter painter;
+    private final Painter painter;
     private final Fractal mandelbrot;
     private final Converter conv;
     private final MenuManager menuManager;
@@ -87,8 +86,7 @@ public class MainWindow extends JFrame {
             }
         });
 
-        menuManager = new MenuManager(this, (FractalPainter) painter);
-
+        menuManager = new MenuManager((FractalPainter) painter, mainPanel);
         setJMenuBar(menuManager.createMenuBar());
 
         setContent();
