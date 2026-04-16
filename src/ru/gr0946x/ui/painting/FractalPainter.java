@@ -56,21 +56,47 @@ public class FractalPainter implements Painter{
         int w = getWidth();
         int h = getHeight();
 
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D resultG = result.createGraphics();
 
-        for (int i = 0; i < w; i++) {
-            for (int j = 0; j < h; j++) {
-                var x = conv.xScr2Crt(i);
-                var y = conv.yScr2Crt(j);
-                var res = fractal.inSetProbability(x, y);
-                g.setColor(colorFunction.getColor(res));
-                g.fillRect(i, j, 1, 1);
+        int procs = Runtime.getRuntime().availableProcessors();
+        Thread[] threads = new Thread[procs];
+
+        for (int k = 0; k < procs; k++) {
+            final int threadId = k;
+
+            BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = bi.createGraphics();
+
+            threads[k] = new Thread(() -> {
+                for (int i = threadId; i < w; i += procs) {
+                    for (int j = 0; j < h; j++) {
+                        var x = conv.xScr2Crt(i);
+                        var y = conv.yScr2Crt(j);
+                        var res = fractal.inSetProbability(x, y);
+                        g.setColor(colorFunction.getColor(res));
+                        g.fillRect(i, j, 1, 1);
+                    }
+                }
+                g.dispose();
+
+                synchronized (resultG) {
+                    resultG.drawImage(bi, 0, 0, null);
+                }
+            });
+            threads[k].start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
-        g.dispose();
-        return img;
+        resultG.dispose();
+        return result;
     }
     public Converter getConverter() {
         return conv;
