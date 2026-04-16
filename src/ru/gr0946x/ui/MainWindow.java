@@ -8,7 +8,6 @@ import ru.gr0946x.ui.painting.Painter;
 import ru.smak.math.Complex;
 import ru.gr0946x.ui.fractals.FractalConfig;
 import ru.gr0946x.ui.fractals.ColorFunction;
-import ru.gr0946x.ui.fractals.Fractal;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,7 +19,7 @@ import static java.lang.Math.*;
 public class MainWindow extends JFrame {
 
     private final SelectablePanel mainPanel;
-    private final Painter painter;
+    private Painter painter;
     private final Fractal mandelbrot;
     private final Converter conv;
     private final MenuManager menuManager;
@@ -86,7 +85,7 @@ public class MainWindow extends JFrame {
             }
         });
 
-        menuManager = new MenuManager((FractalPainter) painter, mainPanel);
+        menuManager = new MenuManager((FractalPainter) painter, mainPanel, this);
         setJMenuBar(menuManager.createMenuBar());
 
         setContent();

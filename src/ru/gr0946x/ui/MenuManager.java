@@ -15,10 +15,12 @@ import ru.gr0946x.ui.fractals.FractalConfig;
 public class MenuManager {
     private final FractalPainter painter;
     private final SelectablePanel panel;
+    private final MainWindow mainWindow;
 
-    public MenuManager(FractalPainter painter, SelectablePanel panel) {
+    public MenuManager(FractalPainter painter, SelectablePanel panel, MainWindow mainWindow) {
         this.painter = painter;
         this.panel = panel;
+        this.mainWindow = mainWindow;
     }
     public JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
